@@ -41,22 +41,23 @@
 #define C_GE 0x5
 #define C_G 0x6
 
+typedef enum { false, true } bool;
+
 struct Instr {
 	unsigned int iCd : 4;
 	unsigned int iFn : 4;
 	unsigned int rA : 4;
 	unsigned int rB : 4;
 	unsigned long long C;
-	bool endOfFile = false;
-	bool error = false;
-}
+	bool endOfFile;
+	bool error;
+};
 
 int main(int argc, char **argv) {
 
 	FILE *machineCode, *outputFile;
 	long currAddr = 0;
 	unsigned char currByte;
-	struct Instr currInstr;
 
 	// Verify that the command line has an appropriate number
 	// of arguments
@@ -103,8 +104,6 @@ int main(int argc, char **argv) {
 	printf("Opened %s, starting offset 0x%lX\n", argv[1], currAddr);
 	printf("Saving output to %s\n", argv[2]);
 
-
-	
 	fclose(machineCode);
 	fclose(outputFile);
 	return SUCCESS;
@@ -118,19 +117,27 @@ struct Instr readInstr(FILE *machinecode) {
 		currInstr.iCd = currByte >> 4;
 		currInstr.iFn = currByte & 0xf;
 	} else {
-		currInstr.end = true;
+		currInstr.endOfFile = true;
 		return currInstr;
 	}
 	
 	switch(currInstr.iCd) {
 		case I_HALT:
+            break;
 		case I_NOP:
+            break;
 		case I_IRMOVQ:
+            break;
 		case I_RMMOVQ:
+            break;
 		case I_MRMOVQ:
+            break;
 		case I_CALL:
+            break;
 		case I_RET:
+            break;
 		case I_PUSHQ:
+            break;
 		case I_POPQ:
 			if(currInstr.iFn != 0x0) {
 				currInstr.error = true;
@@ -138,29 +145,43 @@ struct Instr readInstr(FILE *machinecode) {
 			}
 			break;
 		case I_RRMOVQ:
+            break;
 		case I_JXX:
 			switch(currInstr.iFn) {
 				case C_NC:
+                    break;
 				case C_LE:
+                    break;
 				case C_L:
+                    break;
 				case C_E:
+                    break;
 				case C_NE:
+                    break;
 				case C_GE:
+                    break;
 				case C_G:
-
+                    break;
 			}
 			break;
 		case I_OPQ:
 			switch(currInstr.iFn) {
 				case A_ADDQ:
+                    break;
 				case A_SUBQ:
+                    break;
 				case A_ANDQ:
+                    break;
 				case A_XORQ:
+                    break;
 				case A_MULQ:
+                    break;
 				case A_DIVQ:
+                    break;
 				case A_MODQ:
+                    break;
 			}
 			break;
 	}
-	return currInstr
+	return currInstr;
 }
