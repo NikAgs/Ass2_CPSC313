@@ -44,144 +44,155 @@
 typedef enum { false, true } bool;
 
 struct Instr {
-	unsigned int iCd : 4;
-	unsigned int iFn : 4;
-	unsigned int rA : 4;
-	unsigned int rB : 4;
-	unsigned long long C;
-	bool endOfFile;
-	bool error;
+    long addr;
+    long fullHex;
+    char name;
+    char op1;
+    char op2;
+    bool error;
+    bool endFile;
 };
+
+int printInstr(struct Instr instr) {
+
+    //printf("%08x: %-14s", addr, fullHex, );
+    //n=snprintf(buff, 256, "%08x: %-14s%-8s  %s, %s\n", currAddr, buffer, "rrmovl", regA, regB);
+    //res = fileno(f);
+    //write(res, buff, n );
+}
+
 
 int main(int argc, char **argv) {
 
-	FILE *machineCode, *outputFile;
-	long currAddr = 0;
-	unsigned char currByte;
+    FILE *machineCode, *outputFile;
+    long currAddr = 0;
+    unsigned char currByte;
 
-	// Verify that the command line has an appropriate number
-	// of arguments
+    // Verify that the command line has an appropriate number
+    // of arguments
 
-	if (argc < 3 || argc > 4) {
-		printf("Usage: %s InputFilename OutputFilename [startingOffset]\n", argv[0]);
-		return ERROR_RETURN;
-	}
+    if (argc < 3 || argc > 4) {
+        printf("Usage: %s InputFilename OutputFilename [startingOffset]\n", argv[0]);
+        return ERROR_RETURN;
+    }
 
-	// First argument is the file to read, attempt to open it 
-	// for reading and verify that the open did occur.
-	machineCode = fopen(argv[1], "rb");
+    // First argument is the file to read, attempt to open it 
+    // for reading and verify that the open did occur.
+    machineCode = fopen(argv[1], "rb");
 
-	if (machineCode == NULL) {
-		printf("Failed to open %s: %s\n", argv[1], strerror(errno));
-		return ERROR_RETURN;
-	}
+    if (machineCode == NULL) {
+        printf("Failed to open %s: %s\n", argv[1], strerror(errno));
+        return ERROR_RETURN;
+    }
 
-	// Second argument is the file to write, attempt to open it 
-	// for writing and verify that the open did occur.
-	outputFile = fopen(argv[2], "w");
+    // Second argument is the file to write, attempt to open it 
+    // for writing and verify that the open did occur.
+    outputFile = fopen(argv[2], "w");
 
-	if (outputFile == NULL) {
-		printf("Failed to open %s: %s\n", argv[2], strerror(errno));
-		fclose(machineCode);
-		return ERROR_RETURN;
-	}
+    if (outputFile == NULL) {
+        printf("Failed to open %s: %s\n", argv[2], strerror(errno));
+        fclose(machineCode);
+        return ERROR_RETURN;
+    }
 
-	// If there is a 3rd argument present it is an offset so
-	// convert it to a value. 
-	if (4 == argc) {
-		// See man page for strtol() as to why
-		// we check for errors by examining errno
-		errno = 0;
-		currAddr = strtol(argv[3], NULL, 0);
-		if (errno != 0) {
-			perror("Invalid offset on command line");
-			fclose(machineCode);
-			fclose(outputFile);
-			return ERROR_RETURN;
-		}
-	}
+    // If there is a 3rd argument present it is an offset so
+    // convert it to a value. 
+    if (4 == argc) {
+        // See man page for strtol() as to why
+        // we check for errors by examining errno
+        errno = 0;
+        currAddr = strtol(argv[3], NULL, 0);
+        if (errno != 0) {
+            perror("Invalid offset on command line");
+            fclose(machineCode);
+            fclose(outputFile);
+            return ERROR_RETURN;
+        }
+    }
 
-	printf("Opened %s, starting offset 0x%lX\n", argv[1], currAddr);
-	printf("Saving output to %s\n", argv[2]);
+    printf("Opened %s, starting offset 0x%lX\n", argv[1], currAddr);
+    printf("Saving output to %s\n", argv[2]);
 
-	fclose(machineCode);
-	fclose(outputFile);
-	return SUCCESS;
+    samplePrint(stderr);
+
+    fclose(machineCode);
+    fclose(outputFile);
+    return SUCCESS;
 }
 
 struct Instr readInstr(FILE *machinecode) {
-	struct Instr currInstr;
-	int currByte;
+    struct Instr currInstr;
+    unsigned int iCd,iFn;
+    int currByte;
 
-	if((currByte = fgetc(machinecode)) != EOF) {
-		currInstr.iCd = currByte >> 4;
-		currInstr.iFn = currByte & 0xf;
-	} else {
-		currInstr.endOfFile = true;
-		return currInstr;
-	}
-	
-	switch(currInstr.iCd) {
-		case I_HALT:
+    if((currByte = fgetc(machinecode)) != EOF) {
+        iCd = currByte >> 4;
+        iFn = currByte & 0xf;
+    } else {
+        return currInstr;
+    }
+
+    switch(iCd) {
+        case I_HALT:
             break;
-		case I_NOP:
+        case I_NOP:
             break;
-		case I_IRMOVQ:
+        case I_IRMOVQ:
             break;
-		case I_RMMOVQ:
+        case I_RMMOVQ:
             break;
-		case I_MRMOVQ:
+        case I_MRMOVQ:
             break;
-		case I_CALL:
+        case I_CALL:
             break;
-		case I_RET:
+        case I_RET:
             break;
-		case I_PUSHQ:
+        case I_PUSHQ:
             break;
-		case I_POPQ:
-			if(currInstr.iFn != 0x0) {
-				currInstr.error = true;
-				return currInstr;
-			}
-			break;
-		case I_RRMOVQ:
+        case I_POPQ:
+            if(iFn != 0x0) {
+                currInstr.error = true;
+                return currInstr;
+            }
             break;
-		case I_JXX:
-			switch(currInstr.iFn) {
-				case C_NC:
+        case I_RRMOVQ:
+            break;
+        case I_JXX:
+            switch(iFn) {
+                case C_NC:
                     break;
-				case C_LE:
+                case C_LE:
                     break;
-				case C_L:
+                case C_L:
                     break;
-				case C_E:
+                case C_E:
                     break;
-				case C_NE:
+                case C_NE:
                     break;
-				case C_GE:
+                case C_GE:
                     break;
-				case C_G:
+                case C_G:
                     break;
-			}
-			break;
-		case I_OPQ:
-			switch(currInstr.iFn) {
-				case A_ADDQ:
+            }
+            break;
+        case I_OPQ:
+            switch(iFn) {
+                case A_ADDQ:
                     break;
-				case A_SUBQ:
+                case A_SUBQ:
                     break;
-				case A_ANDQ:
+                case A_ANDQ:
                     break;
-				case A_XORQ:
+                case A_XORQ:
                     break;
-				case A_MULQ:
+                case A_MULQ:
                     break;
-				case A_DIVQ:
+                case A_DIVQ:
                     break;
-				case A_MODQ:
+                case A_MODQ:
                     break;
-			}
-			break;
-	}
-	return currInstr;
+            }
+            break;
+    }
+    return currInstr;
 }
