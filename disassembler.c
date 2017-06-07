@@ -49,30 +49,30 @@ bool endFile = false;
 
 struct Instr {
     long addr;
-    char fullHex[11];
-    char name[7];
-    char op1[15];
-    char op2[15];
+    char fullHex[100];
+    char name[100];
+    char op1[100];
+    char op2[100];
 };
 
 int printInstr(struct Instr instr) {
 
     if (!error) {
-        printf("%016x: ", instr.addr);
+        printf("%016lx: ", instr.addr);
 
-        for (int i=0; i<10; i++) {
+        for (int i=0; i<20; i++) {
             if (instr.fullHex[i] == '\0') {
-                printf("  ");
+                printf(" ");
             } else {
                 printf("%c", instr.fullHex[i]);
             }
         }
 
         printf("  %s", instr.name);
-        if (instr.op1) {
+        if  (strcmp(instr.op1,"") != 0) {
             printf(" %s", instr.op1);
         } 
-        if (instr.op2) {
+        if (strcmp(instr.op2,"") != 0) {
             printf(", %s", instr.op2);
         }
         printf("\n");
@@ -81,7 +81,6 @@ int printInstr(struct Instr instr) {
         return ERROR_RETURN;
     }
 }
-
 
 char *getRegister(char r) {
     char *ret = malloc(6);
@@ -133,8 +132,9 @@ char *getRegister(char r) {
             break;
         default:
             error = true;
-            return ret;
+            strcpy(ret, "error");
     }
+    return ret;
 }
 
 int main(int argc, char **argv) {
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 
     printf("Opened %s, starting offset 0x%lX\n", argv[1], currAddr);
     printf("Saving output to %s\n", argv[2]);
-
+    
     fclose(machineCode);
     fclose(outputFile);
     return SUCCESS;
@@ -424,4 +424,5 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 }
             }
     }
+    return currInstr;
 }
