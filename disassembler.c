@@ -42,6 +42,7 @@
 #define C_G 0x6
 
 char *getRegister(char r);
+struct Instr readInstr(FILE *machineCode, long addr);
 typedef enum { false, true } bool;
 
 bool error = false;
@@ -55,7 +56,7 @@ struct Instr {
     char op2[100];
 };
 
-int printInstr(struct Instr instr) {
+int printInstr(FILE *out, struct Instr instr) {
 
     if (!error) {
         printf("%016lx: ", instr.addr);
@@ -69,10 +70,10 @@ int printInstr(struct Instr instr) {
         }
 
         printf("  %s", instr.name);
-        if  (strcmp(instr.op1,"") != 0) {
+        if  (strlen(instr.op1) != 0) {
             printf(" %s", instr.op1);
         } 
-        if (strcmp(instr.op2,"") != 0) {
+        if (strlen(instr.op2) != 0) {
             printf(", %s", instr.op2);
         }
         printf("\n");
@@ -187,7 +188,11 @@ int main(int argc, char **argv) {
 
     printf("Opened %s, starting offset 0x%lX\n", argv[1], currAddr);
     printf("Saving output to %s\n", argv[2]);
-    
+
+
+    printInstr(outputFile, readInstr(machineCode, currAddr));
+
+
     fclose(machineCode);
     fclose(outputFile);
     return SUCCESS;
@@ -196,8 +201,8 @@ int main(int argc, char **argv) {
 struct Instr readInstr(FILE *machineCode, long addr) {
     struct Instr currInstr;
     int currByte;
-    char iCd;
-    char iFn;
+    int iCd;
+    int iFn;
     char rA;
     char rB;
 
@@ -211,9 +216,11 @@ struct Instr readInstr(FILE *machineCode, long addr) {
     //First byte is always iCd/iFn
     //Always check if end of file
     if((currByte = fgetc(machineCode)) != EOF) {
-        currInstr.fullHex[0] = (char) currByte;
-        iFn = currByte >> 4;
-        iCd = currByte & 0xf;
+        //currInstr.fullHex[0] = (char) currByte;
+        iCd = currByte >> 4;
+        iFn = currByte & 0xf;
+        sprintf(currInstr.fullHex, "%02X", currByte);
+        memset(currInstr.fullHex+2, '\0', 25);
     } else {
         endFile = true;
         return currInstr;
@@ -221,32 +228,37 @@ struct Instr readInstr(FILE *machineCode, long addr) {
 
     //Check if iCd and iFn working. Only halt, nop, and ret are finished here
     switch(iCd) {
-
             //HALT, NOP, and RET only have iFn and iCd so we return regardless of error
         case I_HALT:
             strcpy(currInstr.name, "halt");
-            currInstr.fullHex[1] = '\0';
+            currInstr.op1[0] = '\0';
+            currInstr.op2[0] = '\0';
             if(iFn != 0x0) {
                 error = true;
             }
             return currInstr;
             break;
+
         case I_NOP:
             strcpy(currInstr.name, "nop");
-            currInstr.fullHex[1] = '\0';
+            currInstr.op1[0] = '\0';
+            currInstr.op2[0] = '\0';
             if(iFn != 0x0) {
                 error = true;
             }
             return currInstr;
             break;
+
         case I_RET:
             strcpy(currInstr.name, "ret");
-            currInstr.fullHex[1] = '\0';
+            currInstr.op1[0] = '\0';
+            currInstr.op2[0] = '\0';
             if(iFn != 0x0) {
                 error = true;
             }
             return currInstr;
             break;
+
         case I_RRMOVQ:
             switch(iFn) {
                 case C_NC:
@@ -274,10 +286,8 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                     error = true;
                     return currInstr;
             }
-
             if((currByte = fgetc(machineCode)) != EOF) {
-                currInstr.fullHex[1] = (char) currByte;
-                currInstr.fullHex[2] = '\0';
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
                 rA = currByte >> 4;
                 rB = currByte & 0xf;
                 strcpy(currInstr.op1, getRegister(rA));
@@ -290,6 +300,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 return currInstr;
             }
             break;
+
         case I_OPQ:
             switch(iFn) {
                 case A_ADDQ:
@@ -313,14 +324,12 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 case A_MODQ:
                     strcpy(currInstr.name, "modq");
                     break;
-                    defualt:
+                default:
                     error = true;
                     return currInstr;
             }
-
             if((currByte = fgetc(machineCode)) != EOF) {
-                currInstr.fullHex[1] = (char) currByte;
-                currInstr.fullHex[2] = '\0';
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
                 rA = currByte >> 4;
                 rB = currByte & 0xf;
                 strcpy(currInstr.op1, getRegister(rA));
@@ -333,6 +342,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 return currInstr;
             }
             break;
+
         case I_PUSHQ:
             if(iFn != 0x0) {
                 error = true;
@@ -341,10 +351,10 @@ struct Instr readInstr(FILE *machineCode, long addr) {
 
             strcpy(currInstr.name, "pushq");
             if((currByte = fgetc(machineCode)) != EOF) {
-                currInstr.fullHex[1] = (char) currByte;
-                currInstr.fullHex[2] = '\0';
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
                 rA = currByte >> 4;
                 strcpy(currInstr.op1, getRegister(rA));
+                currInstr.op2[0] = '\0';
                 if(error == true) {
                     return currInstr;
                 }
@@ -353,6 +363,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 return currInstr;
             }
             break;
+
         case I_POPQ:
             if(iFn != 0x0) {
                 error = true;
@@ -361,10 +372,10 @@ struct Instr readInstr(FILE *machineCode, long addr) {
 
             strcpy(currInstr.name, "popq");
             if((currByte = fgetc(machineCode)) != EOF) {
-                currInstr.fullHex[1] = (char) currByte;
-                currInstr.fullHex[2] = '\0';
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
                 rA = currByte >> 4;
                 strcpy(currInstr.op1, getRegister(rA));
+                currInstr.op2[0] = '\0';
                 if(error == true) {
                     return currInstr;
                 }
@@ -373,6 +384,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 return currInstr;
             }
             break;
+
             //------------------------------------------------------- Finishline
         case I_IRMOVQ:
             if(iFn != 0x0) {
@@ -396,33 +408,34 @@ struct Instr readInstr(FILE *machineCode, long addr) {
             for(int i = 0; i < 8; i++) {
                 if((currByte = fgetc(machineCode)) != EOF) {
                     currInstr.fullHex[i + 2] = (char) currByte;
-
-                    break;
-                    case I_RMMOVQ:
-                    case I_MRMOVQ:
-                    case I_CALL:
-
-                    case I_JXX:
-                    switch(iFn) {
-                        case C_NC:
-                        case C_LE:
-                        case C_L:
-                        case C_E:
-                        case C_NE:
-                        case C_GE:
-                        case C_G:
-                            break;
-                        default:
-                            error = true;
-                            return currInstr;
-                    }
-                    break;
-                    //iCd is broken if here
-                    default:
-                    error = true;
-                    return currInstr;
                 }
             }
+            break;
+
+        case I_RMMOVQ:
+            break;
+
+        case I_MRMOVQ:
+            break;
+
+        case I_CALL:
+            break;
+
+        case I_JXX:
+            switch(iFn) {
+                case C_NC:
+                case C_LE:
+                case C_L:
+                case C_E:
+                case C_NE:
+                case C_GE:
+                case C_G:
+                    break;
+                default:
+                    error = true;
+                    return currInstr;
+            }
     }
+
     return currInstr;
 }
