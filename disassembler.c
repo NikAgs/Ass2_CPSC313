@@ -480,23 +480,67 @@ struct Instr readInstr(FILE *machineCode, long addr) {
             break;
 
         case I_CALL:
+			if(iFn != 0x0) {
+				error = true;
+				return currInstr;
+			}
+			strcpy(currInstr.name, "call");
+			strcpy(currInstr.op1, "$0x");
+			currInstr.op2[0] = '\0';
+			
+			for(int i = 0; i < 8; i++) {
+				if((currByte = fgetc(machineCode)) != EOF) {
+					sprintf(currInstr.fullHex+2+(i*2), "%02X", currByte);
+					valP += currByte << (i * 8);
+				} else {
+					endFile = true;
+					return currInstr;
+				}
+			}	
+			sprintf(currInstr.op1+3, "%llx", valP);
             break;
 
-        case I_JXX:
+		case I_JXX:
             switch(iFn) {
                 case C_NC:
+					strcpy(currInstr.name, "j");
+        		    break;
                 case C_LE:
+					strcpy(currInstr.name, "jle");
+					break;
                 case C_L:
+					strcpy(currInstr.name, "jl");
+					break;
                 case C_E:
+					strcpy(currInstr.name, "je");
+					break;
                 case C_NE:
+					strcpy(currInstr.name, "jne");
+					break;
                 case C_GE:
+					strcpy(currInstr.name, "jge");
+					break;
                 case C_G:
+					strcpy(currInstr.name, "jg");
                     break;
                 default:
                     error = true;
                     return currInstr;
             }
-    }
-
+			strcpy(currInstr.op1, "$0x");
+			currInstr.op2[0] = '\0';
+			
+			for(int i = 0; i < 8; i++) {
+				if((currByte = fgetc(machineCode)) != EOF) {
+					sprintf(currInstr.fullHex+2+(i*2), "%02X", currByte);
+					valP += currByte << (i * 8);
+				} else {
+					endFile = true;
+					return currInstr;
+				}
+			}
+			sprintf(currInstr.op1+3, "%llx", valP);
+			break;
+	}
     return currInstr;
 }
