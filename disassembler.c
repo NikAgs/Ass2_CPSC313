@@ -205,7 +205,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
     int iFn;
     char rA;
     char rB;
-    char valC[100];
+    long long valC;
 
     //Start stream from offset
     fseek(machineCode, addr, SEEK_SET);
@@ -394,7 +394,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
             }
             strcpy(currInstr.name, "irmovq");
             if((currByte = fgetc(machineCode)) != EOF) {
-                sprintf(currInstr.fullHex+2, "%02X", currByte);
+                sprintf(currInstr.fullHex[1], "%02X", currByte);
                 rA = currByte >> 4;
                 rB = currByte & 0xf;
                 strcpy(currInstr.op2, getRegister(rB));
@@ -411,10 +411,15 @@ struct Instr readInstr(FILE *machineCode, long addr) {
             }
             for(int i = 0; i < 8; i++) {
                 if((currByte = fgetc(machineCode)) != EOF) {
-                    sprintf(currInstr.fullHex+4+(2*i), "%02X", currByte);
-                    sprintf(valC + (2*i), "%02X", currByte);
-                }
+                    sprintf(currInstr.fullHex[i + 2], "%02X", currByte);
+					valC += currByte << (i * 8);
+                } else {
+					endFile = true;
+					return currInstr;
+				}
             }
+			currInstr.fullHex[10] = '\0';
+			sprintf(currInstr.op1, "%x", valC);
             break;
 
         case I_RMMOVQ:
