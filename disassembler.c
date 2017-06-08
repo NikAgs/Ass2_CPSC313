@@ -370,7 +370,6 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 error = true;
                 return currInstr;
             }
-
             strcpy(currInstr.name, "popq");
             if((currByte = fgetc(machineCode)) != EOF) {
                 sprintf(currInstr.fullHex+2, "%02X", currByte);
@@ -398,7 +397,6 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                 rA = currByte >> 4;
                 rB = currByte & 0xf;
                 strcpy(currInstr.op2, getRegister(rB));
-                strcpy(currInstr.op1, "$0x");
                 if (rA != 0xf) {
                     error = true;
                 }
@@ -418,13 +416,67 @@ struct Instr readInstr(FILE *machineCode, long addr) {
                     return currInstr;
                 }
             }
-            sprintf(currInstr.op1+3, "%llx", valC);
+            sprintf(currInstr.op1, "$0x%llx", valC);
             break;
 
         case I_RMMOVQ:
+            if(iFn != 0x0) {
+                error = true;
+                return currInstr;
+            }
+            strcpy(currInstr.name, "rmmovq");
+            if((currByte = fgetc(machineCode)) != EOF) {
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
+                rA = currByte >> 4;
+                rB = currByte & 0xf;
+                strcpy(currInstr.op1, getRegister(rA));
+                if(error == true) {
+                    return currInstr;
+                }
+            } else {
+                endFile = true;
+                return currInstr;
+            }
+            for(int i = 0; i < 8; i++) {
+                if((currByte = fgetc(machineCode)) != EOF) {
+                    sprintf(currInstr.fullHex+4+(i*2), "%02X", currByte);
+                    valC += currByte << (i * 8);
+                } else {
+                    endFile = true;
+                    return currInstr;
+                }
+            }
+            sprintf(currInstr.op2, "$0x%llx(%s)", valC, getRegister(rB));
             break;
 
         case I_MRMOVQ:
+             if(iFn != 0x0) {
+                error = true;
+                return currInstr;
+            }
+            strcpy(currInstr.name, "mrmovq");
+            if((currByte = fgetc(machineCode)) != EOF) {
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
+                rA = currByte >> 4;
+                rB = currByte & 0xf;
+                strcpy(currInstr.op2, getRegister(rB));
+                if(error == true) {
+                    return currInstr;
+                }
+            } else {
+                endFile = true;
+                return currInstr;
+            }
+            for(int i = 0; i < 8; i++) {
+                if((currByte = fgetc(machineCode)) != EOF) {
+                    sprintf(currInstr.fullHex+4+(i*2), "%02X", currByte);
+                    valC += currByte << (i * 8);
+                } else {
+                    endFile = true;
+                    return currInstr;
+                }
+            }
+            sprintf(currInstr.op1, "$0x%llx(%s)", valC, getRegister(rA));
             break;
 
         case I_CALL:
