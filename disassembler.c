@@ -394,7 +394,7 @@ struct Instr readInstr(FILE *machineCode, long addr) {
             }
             strcpy(currInstr.name, "irmovq");
             if((currByte = fgetc(machineCode)) != EOF) {
-                sprintf(currInstr.fullHex[1], "%02X", currByte);
+                sprintf(currInstr.fullHex+2, "%02X", currByte);
                 rA = currByte >> 4;
                 rB = currByte & 0xf;
                 strcpy(currInstr.op2, getRegister(rB));
@@ -411,15 +411,14 @@ struct Instr readInstr(FILE *machineCode, long addr) {
             }
             for(int i = 0; i < 8; i++) {
                 if((currByte = fgetc(machineCode)) != EOF) {
-                    sprintf(currInstr.fullHex[i + 2], "%02X", currByte);
-					valC += currByte << (i * 8);
+                    sprintf(currInstr.fullHex+4+(i*2), "%02X", currByte);
+                    valC += currByte << (i * 8);
                 } else {
-					endFile = true;
-					return currInstr;
-				}
+                    endFile = true;
+                    return currInstr;
+                }
             }
-			currInstr.fullHex[10] = '\0';
-			sprintf(currInstr.op1, "%x", valC);
+            sprintf(currInstr.op1+3, "%llx", valC);
             break;
 
         case I_RMMOVQ:
